@@ -1,0 +1,11 @@
+.env*
+!.env.example
+config.local.*
+*.local.*
+secrets/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+__pycache__/
+.DS_Store
