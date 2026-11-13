@@ -82,7 +82,7 @@ const auditSchema = {
           task: { type: "string" },
           link: { type: "string" }
         },
-        required: ["task"]
+        required: ["task", "link"]
       }
     }
   },
@@ -103,7 +103,8 @@ const ORG_REPO_NAMES = [
   "mac-connection",
   "ledger-morning-harness",
   "tool-catalog",
-  "kids-mac-notify"
+  "kids-mac-notify",
+  "inventory-harness"
 ];
 function extractUrls(text) {
   if (!text) return [];
@@ -131,13 +132,23 @@ function partitionByScope(candidates) {
   }
   return { accepted, rejected };
 }
+// rows を監査し、範囲漏れの疑い（組織リンクのない行）を返す。
+// ただし URL を1つも含まない行が半数以上ある場合は、監査段の読み取りが
+// 壊れている疑いが強いので、監査そのものを不完全として疑いリストを出さない。
+// （2026-11-14 の事故：全行リンクなしの出力がそのまま疑い22件として報告された）
+// 戻り値：{ status: "ok" | "incomplete", suspects: string[], rows: number, rowsWithoutUrl: number }
 function auditScope(rows) {
+  const list = (rows || []).filter((r) => r && r.task);
   const suspects = [];
-  for (const r of rows || []) {
-    if (!r || !r.task) continue;
+  let withoutUrl = 0;
+  for (const r of list) {
+    if (extractUrls(r.link).length === 0) withoutUrl++;
     if (!isOrgLink(r.link)) suspects.push(r.task);
   }
-  return suspects;
+  if (list.length > 0 && withoutUrl * 2 >= list.length) {
+    return { status: "incomplete", suspects: [], rows: list.length, rowsWithoutUrl: withoutUrl };
+  }
+  return { status: "ok", suspects: suspects, rows: list.length, rowsWithoutUrl: withoutUrl };
 }
 // === SCOPE-CHECK-END ===
 
@@ -256,17 +267,23 @@ const scopeAudit = await runStage("scope-audit", "対象範囲の監査（既存
   [
     "あなたは「タスク台帳の対象範囲の監査」専任のエージェントです。役割は1つだけ：台帳の既存行を全部読み、各行のタスク名と関連リンクを構造化して返すこと。シートへの書き込みは絶対にしないでください。範囲内かどうかの判定はハーネスのコード側が行うので、あなたは読み取りだけを行います。報告は自分でチャットに送信せず、結果の reports に入れて返すこと。",
     commonRules,
-    "返し方：タブ「タスク台帳」の全行（ヘッダー行を除く）を読み、B列（タスク）が空でない行をすべて rows に入れる：task（B列のタスク名）、link（G列の関連リンク。空なら空文字）。1行も漏らさないこと。",
-    "- 読めなかった場合は status を failed にする（推測で rows を作らない）。reports は空でよい。",
+    "返し方：タブ「タスク台帳」の全行（ヘッダー行を除く）を読み、B列（タスク）が空でない行をすべて rows に入れる：task（B列のタスク名）、link（G列の関連リンク。G列が空の行は空文字にする。link の項目自体は必ず含めること）。1行も漏らさないこと。",
+    "- G列の値が読めなかった行は、空文字でごまかさず status を failed にする（推測で rows を作らない）。シート自体が読めなかった場合も status を failed にする。reports は空でよい。",
     retryNote(last, attempt)
   ].join("\n"), auditSchema
 );
 if (scopeAudit.status === "success") {
-  scopeSuspectExisting = auditScope(scopeAudit.rows || []);
-  if (scopeSuspectExisting.length > 0) {
-    scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります（範囲漏れの疑い。自動削除はしません）：" + scopeSuspectExisting.map((t) => "「" + t + "」").join("、") });
+  const auditResult = auditScope(scopeAudit.rows || []);
+  if (auditResult.status === "incomplete") {
+    scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の台帳の範囲監査は読み取り不完全のため実施できませんでした（全 " + auditResult.rows + " 行中 " + auditResult.rowsWithoutUrl + " 行にリンクがなく、疑いの判定ができません）。疑いリストは出しません。" });
+    log("scope audit incomplete", { rows: auditResult.rows, rowsWithoutUrl: auditResult.rowsWithoutUrl });
+  } else {
+    scopeSuspectExisting = auditResult.suspects;
+    if (scopeSuspectExisting.length > 0) {
+      scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります（範囲漏れの疑い。自動削除はしません）：" + scopeSuspectExisting.map((t) => "「" + t + "」").join("、") });
+    }
+    log("scope audit finished", { rows: auditResult.rows, suspects: scopeSuspectExisting.length });
   }
-  log("scope audit finished", { rows: (scopeAudit.rows || []).length, suspects: scopeSuspectExisting.length });
 } else {
   scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の台帳の範囲監査は失敗しました（" + scopeAudit.summary + "）" });
   log("scope audit failed", { summary: scopeAudit.summary });

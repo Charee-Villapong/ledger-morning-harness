@@ -1,0 +1,90 @@
+[
+  {
+    "task": "AI組織 #11（面談ノート）開発加速の進捗確認",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "Mac 権限クリーンアップの封印確認",
+    "link": "https://github.com/Charee-Villapong/mac-connection"
+  },
+  {
+    "task": "ScreenCheck 恒久対策（再ビルド）の判断",
+    "link": "https://github.com/Charee-Villapong/mac-connection"
+  },
+  {
+    "task": "AI組織 #11 P2：Docsノート（テンプレート・面談ごとのノート）の作成と自動作成の有効化",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "AI組織 #11 V1：STTモデルの実測選定とパイプライン接続",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "AI組織 #11 P3準備：Mac側ツールの実装計画とソース雛形",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11#issuecomment-6718477811"
+  },
+  {
+    "task": "AI組織 #11 P3実働：Mac上でのビルド・権限付与・試し録音",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "AI組織 #1 第2段階：応募候補リストの国内ソース収集の有効化",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/1"
+  },
+  {
+    "task": "AI組織 #3：稼働見守り台帳のシャドー運用",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/3"
+  },
+  {
+    "task": "シート書き込みtoolの作成と主要シートへの載せ替え（検査役つき）",
+    "link": "https://github.com/Charee-Villapong/sheet-writer"
+  },
+  {
+    "task": "Macのディスプレイ設定の恒久変更（AC電源時）",
+    "link": "https://github.com/Charee-Villapong/mac-connection"
+  },
+  {
+    "task": "AI組織 #11 J-13：録音が禁止される面談への対応判断",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "AI組織 #11 J-9：文字起こしの合格ラインの最終確定",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "interview-notesのCLI拡張（Mac側の音声コピー削除完了の申告手段）",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "スプレッドシートまとめページへの「応募候補リスト」の追加",
+    "link": "https://docs.google.com/spreadsheets/d/19wGlth8THbDMBJCi4ppIVTz0u7dE8L2X0IqnK8ZSoRw/edit\nhttps://github.com/Charee-Villapong/ai-organization/issues/1"
+  },
+  {
+    "task": "月次棚卸しの結果確認（ルール・スキル＋リファクタリング候補＋GitHub公開可否）",
+    "link": "https://github.com/Charee-Villapong/inventory-harness"
+  },
+  {
+    "task": "エントロピー削減の仕組みの構築（AI組織 Issue #19）",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/19"
+  },
+  {
+    "task": "Mac 側クローンの廃止・削除",
+    "link": "https://github.com/Charee-Villapong/interview-notes"
+  },
+  {
+    "task": "AI組織 #11 system音声キャプチャの修正（本番録音で相手側音声が全編無音だった件）",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11"
+  },
+  {
+    "task": "AI組織 #11：録音自動取り込み hook（interview-recording-watch）の実発火テストと有効化",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/11#issuecomment-6740273435"
+  },
+  {
+    "task": "台帳の朝ワークフロー（ledger-morning-pipeline）の完走確認と朝cronの1本化",
+    "link": "https://github.com/Charee-Villapong/ledger-morning-harness"
+  },
+  {
+    "task": "AI組織 #30：AIエージェント改善タスクフォースの新設（企画審査通過・本人判断待ち）",
+    "link": "https://github.com/Charee-Villapong/ai-organization/issues/30"
+  }
+]
