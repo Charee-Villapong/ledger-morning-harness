@@ -151,6 +151,56 @@ function auditScope(rows) {
   return { status: "ok", suspects: suspects, rows: list.length, rowsWithoutUrl: withoutUrl };
 }
 // === SCOPE-CHECK-END ===
+// === FAILURE-AUDIT-BEGIN ===
+// 失敗したのに台帳に無いものの機械チェック（Issue #35）。
+// failures: [{task}]（失敗・中断した作業）、ledgerTasks: 台帳のタスク名一覧。
+// 台帳が空で失敗がある場合は読み取り不完全として欠落を出さない（範囲監査と同じ扱い）。
+function detectUnregisteredFailures(failures, ledgerTasks) {
+  const failed = [];
+  for (const f of failures || []) {
+    const t = f && f.task ? String(f.task).trim() : "";
+    if (t && failed.indexOf(t) < 0) failed.push(t);
+  }
+  const registered = {};
+  for (const t of ledgerTasks || []) {
+    if (t) registered[String(t).trim()] = true;
+  }
+  if (failed.length > 0 && Object.keys(registered).length === 0) {
+    return { status: "incomplete", missing: [], failures: failed.length };
+  }
+  return { status: "ok", missing: failed.filter((t) => !registered[t]), failures: failed.length };
+}
+// === FAILURE-AUDIT-END ===
+
+const failureSchema = {
+  type: "object",
+  properties: {
+    status: { type: "string", enum: ["success", "failed"] },
+    summary: { type: "string" },
+    reports: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          destination: { type: "string", enum: ["main", "ai-org"] },
+          text: { type: "string" }
+        },
+        required: ["destination", "text"]
+      }
+    },
+    failures: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { task: { type: "string" } },
+        required: ["task"]
+      }
+    },
+    ledgerTasks: { type: "array", items: { type: "string" } }
+  },
+  required: ["status", "summary", "reports"]
+};
+
 
 const commonRules = [
   "今日の日付は " + date + " です。",
@@ -287,6 +337,35 @@ if (scopeAudit.status === "success") {
 } else {
   scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の台帳の範囲監査は失敗しました（" + scopeAudit.summary + "）" });
   log("scope audit failed", { summary: scopeAudit.summary });
+}
+
+
+// 失敗未登録の監査（Issue #35）：失敗記録と台帳をコードで突合する。読み取り専用。
+const failureAudit = await runStage("failure-audit", "失敗未登録の監査", (last, attempt) =>
+  [
+    "あなたは「失敗未登録の監査」専任のエージェントです。役割は2つだけ：(1) 昨日と今日に失敗・中断した作業を失敗記録として集めること、(2) 台帳の既存行のタスク名を全部集めること。シートへの書き込みは絶対にしないでください。台帳にあるかどうかの判定はハーネスのコード側が行うので、あなたは読み取りだけを行います。",
+    commonRules,
+    "失敗記録の拾う先：",
+    "1. 前日と当日の観測メモ（~/memory/YYYY-MM-DD.md）に書かれた失敗・中断・障害で止まった作業。",
+    "2. GitHub リポジトリ __ORG_REPO__ の Issue の最新コメントで、失敗・中断が報告されている作業（gh は gh）。",
+    "返し方：failures に1件ずつ {task}（失敗した作業のタスク名。台帳のタスク名と一致させるため簡潔に）、ledgerTasks に台帳「タスク台帳」タブの B列（タスク）が空でない全行のタスク名を入れる。どちらか一方でも読めなかった場合は status を failed にする（推測で作らない）。reports は空でよい。",
+    retryNote(last, attempt)
+  ].join("\n"), failureSchema
+);
+if (failureAudit.status === "success") {
+  const fr = detectUnregisteredFailures(failureAudit.failures || [], failureAudit.ledgerTasks || []);
+  if (fr.status === "incomplete") {
+    scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の失敗未登録監査は台帳の読み取り不完全のため実施できませんでした（失敗記録 " + fr.failures + " 件に対し台帳が読めていません）。欠落リストは出しません。" });
+    log("failure audit incomplete", { failures: fr.failures });
+  } else {
+    if (fr.missing.length > 0) {
+      scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + fr.missing.length + " 件あります：" + fr.missing.map((t) => "「" + t + "」").join("、") + "。その場でタスク起票してください（報告の型：タスク名＋再開条件）。" });
+    }
+    log("failure audit finished", { failures: fr.failures, missing: fr.missing.length });
+  }
+} else {
+  scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の失敗未登録監査は失敗しました（" + failureAudit.summary + "）" });
+  log("failure audit failed", { summary: failureAudit.summary });
 }
 
 phase("scan");
