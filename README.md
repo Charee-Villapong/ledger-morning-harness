@@ -40,3 +40,5 @@ Muse のワークフローとして保存し、毎朝の cron から引数 `{ "d
 - `__ORG_REPO__` — 停滞チェック対象の Issue リポジトリ（owner/name）
 - `__ORG_OWNER__` — 対象範囲チェックで使う、組織リポジトリの所有者名
 - `__ORG_REPO_NAME__` — 対象範囲チェックで使う、組織リポジトリの名前（`__ORG_REPO__` の name 部分）
+- `__CODIFY_TASKFORCE_CONFIG__` — 確認待ちキュー提示で使う、タスクフォースの設定ファイルのパス
+- `__CODIFY_TASKFORCE_SRC__` — 確認待ちキュー提示で使う、タスクフォース CLI の src ディレクトリのパス
