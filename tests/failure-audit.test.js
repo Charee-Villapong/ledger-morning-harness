@@ -36,5 +36,33 @@ check("重複・空は除く", eq(r.missing, ["x"]));
 r = detectUnregisteredFailures([{ task: " a " }], ["a"]);
 check("前後空白はそろえる", eq(r.missing, []));
 
+// 本人決定（2026-11-16）で登録しない失敗は、未登録でも提示しない。
+// 実文字列は朝の実行ごとに表記が揺れるため、両日分＋変形で確認する。
+r = detectUnregisteredFailures(
+  [{ task: "FROM40登録" }, { task: "threads-tech-collection" }, { task: "typeログイン" }],
+  ["何か別のタスク"]
+);
+check("決定済み3件（2026-11-16の実文字列）は欠落に出ない",
+  r.status === "ok" && eq(r.missing, []) && r.suppressed.length === 3 && r.failures === 0);
+r = detectUnregisteredFailures(
+  [{ task: "FROM40の新規会員登録" }, { task: "転職サイトtypeへのログイン" }],
+  ["何か別のタスク"]
+);
+check("決定済み（2026-11-15の表記ゆれ）も欠落に出ない",
+  eq(r.missing, []) && r.suppressed.length === 2);
+r = detectUnregisteredFailures([{ task: "ＦＲＯＭ４０ 登録" }, { task: "TYPE ログイン" }], ["x"]);
+check("全角・大文字・空白のゆれも抑止する", eq(r.missing, []) && r.suppressed.length === 2);
+r = detectUnregisteredFailures(
+  [{ task: "FROM40登録" }, { task: "求人チェックパイプラインのdry-run失敗" }],
+  ["x"]
+);
+check("決定済みと混ざっても他の失敗は従来どおり返す",
+  eq(r.missing, ["求人チェックパイプラインのdry-run失敗"]) && r.suppressed.length === 1 && r.failures === 1);
+r = detectUnregisteredFailures([{ task: "FROM40登録" }], []);
+check("決定済みだけ＋台帳空は incomplete にしない",
+  r.status === "ok" && eq(r.missing, []) && r.failures === 0);
+r = detectUnregisteredFailures([{ task: "typeのプロフィール更新" }], ["x"]);
+check("typeでもログインでなければ抑止しない", eq(r.missing, ["typeのプロフィール更新"]));
+
 console.log(failures === 0 ? "\nALL PASS" : "\n" + failures + " FAILURES");
 process.exit(failures === 0 ? 0 : 1);

@@ -155,20 +155,49 @@ function auditScope(rows) {
 // 失敗したのに台帳に無いものの機械チェック（Issue #35）。
 // failures: [{task}]（失敗・中断した作業）、ledgerTasks: 台帳のタスク名一覧。
 // 台帳が空で失敗がある場合は読み取り不完全として欠落を出さない（範囲監査と同じ扱い）。
+//
+// 本人が「タスクに登録しない」と決定した失敗（2026-11-16 本人決定、Issue #35）は
+// 検出対象から外し、朝のチェックで再提示しない。据え置きの追跡が別にある分
+// （例：FROM40の既存の追跡項目）はこの除外の影響を受けない。
+// 失敗名は監査段が毎朝生成するため表記が揺れる（実例：FROM40登録は
+// 2026-11-15「FROM40の新規会員登録」→ 2026-11-16「FROM40登録」、typeログインは
+// 2026-11-15「転職サイトtypeへのログイン」→ 2026-11-16「typeログイン」）。
+// 完全一致では漏れるので、正規化した名前にキーワードが全て含まれるかで照合する。
+const DECIDED_UNREGISTERED_FAILURES = [
+  { keywords: ["from40"], note: "FROM40登録（2026-11-16 本人決定：登録しない）" },
+  { keywords: ["threads-tech-collection"], note: "threads-tech-collection（2026-11-16 本人決定：登録しない）" },
+  { keywords: ["type", "ログイン"], note: "typeログイン（2026-11-16 本人決定：登録しない）" }
+];
+function normalizeFailureName(s) {
+  return String(s || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+}
+function isDecidedUnregisteredFailure(task) {
+  const n = normalizeFailureName(task);
+  if (!n) return false;
+  return DECIDED_UNREGISTERED_FAILURES.some((e) =>
+    e.keywords.every((k) => n.indexOf(normalizeFailureName(k)) >= 0)
+  );
+}
 function detectUnregisteredFailures(failures, ledgerTasks) {
   const failed = [];
+  const suppressed = [];
   for (const f of failures || []) {
     const t = f && f.task ? String(f.task).trim() : "";
-    if (t && failed.indexOf(t) < 0) failed.push(t);
+    if (!t) continue;
+    if (isDecidedUnregisteredFailure(t)) {
+      if (suppressed.indexOf(t) < 0) suppressed.push(t);
+    } else if (failed.indexOf(t) < 0) {
+      failed.push(t);
+    }
   }
   const registered = {};
   for (const t of ledgerTasks || []) {
     if (t) registered[String(t).trim()] = true;
   }
   if (failed.length > 0 && Object.keys(registered).length === 0) {
-    return { status: "incomplete", missing: [], failures: failed.length };
+    return { status: "incomplete", missing: [], failures: failed.length, suppressed: suppressed };
   }
-  return { status: "ok", missing: failed.filter((t) => !registered[t]), failures: failed.length };
+  return { status: "ok", missing: failed.filter((t) => !registered[t]), failures: failed.length, suppressed: suppressed };
 }
 // === FAILURE-AUDIT-END ===
 
@@ -361,7 +390,7 @@ if (failureAudit.status === "success") {
     if (fr.missing.length > 0) {
       scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + fr.missing.length + " 件あります：" + fr.missing.map((t) => "「" + t + "」").join("、") + "。その場でタスク起票してください（報告の型：タスク名＋再開条件）。" });
     }
-    log("failure audit finished", { failures: fr.failures, missing: fr.missing.length });
+    log("failure audit finished", { failures: fr.failures, missing: fr.missing.length, suppressed: (fr.suppressed || []).length });
   }
 } else {
   scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 今朝の失敗未登録監査は失敗しました（" + failureAudit.summary + "）" });
