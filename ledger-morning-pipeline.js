@@ -458,6 +458,6 @@ return {
     scan: { status: scan.status, summary: scan.summary },
     report: { status: report.status, summary: report.summary }
   },
-  reports: allReports,
+  reports: report.reports || allReports,
   scope: { rejectedNew: scopeRejectedNew, suspectExisting: scopeSuspectExisting }
 };
