@@ -166,7 +166,14 @@ function auditScope(rows) {
 const DECIDED_UNREGISTERED_FAILURES = [
   { keywords: ["from40"], note: "FROM40登録（2026-11-16 本人決定：登録しない）" },
   { keywords: ["threads-tech-collection"], note: "threads-tech-collection（2026-11-16 本人決定：登録しない）" },
-  { keywords: ["type", "ログイン"], note: "typeログイン（2026-11-16 本人決定：登録しない）" }
+  { keywords: ["type", "ログイン"], note: "typeログイン（2026-11-16 本人決定：登録しない）" },
+  { keywords: ["enum"], note: "候補リスト収集のenumエラー（2026-11-17 本人決定：閉じる。修正はIssue #69で追跡）" },
+  { keywords: ["mac-ssh"], note: "mac-ssh不通（2026-11-17 本人決定：閉じる。台帳3行目で追跡中）" },
+  { keywords: ["gmail", "セキュリティ"], note: "メインGmailセキュリティ確認のブラウザ失敗（2026-11-17 本人決定：閉じる。本人確認済みで決着）" },
+  { keywords: ["完了報告"], note: "台帳ハーネスの完了報告欠落（2026-11-17 本人決定：閉じる。2026-11-17に修正済み）" },
+  { keywords: ["ワークマン"], note: "ワークマン取り置き再予約の失敗（2026-11-17 本人決定：閉じる。再実行は当日16:08の予約済みcronで追跡）" },
+  { keywords: ["threads", "書き込み"], note: "Threads技術情報収集の書き込み漏れ（2026-11-17 本人決定：閉じる。収集自体は2026-11-16に復旧）" },
+  { keywords: ["行高"], note: "候補リストの行高バグ（2026-11-17 本人決定：閉じる。修正と再発防止は実施済み）" }
 ];
 function normalizeFailureName(s) {
   return String(s || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
