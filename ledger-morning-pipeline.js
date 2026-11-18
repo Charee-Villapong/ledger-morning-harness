@@ -1,7 +1,20 @@
 export const meta = { name: "ledger-morning-pipeline", description: "タスク台帳の朝の4段（新規収集→現況更新・最新化→確認・前進→報告）を直列に実行するハーネス。各段は専任エージェントで、前の段の完了後に必ず次が実行される。段が失敗したらハーネスがその段を再実行する（最大3回）。", phases: ["collect", "refresh", "scan", "report"] };
 
 const inputs = args ?? {};
-const date = inputs.date;
+// date 未指定時は Asia/Tokyo の当日日付を使う（"undefined" がプロンプト・
+// パス・引数へ展開されて壊れるのを防ぐ）。
+function todayInTokyo() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const v = {};
+  for (const p of parts) v[p.type] = p.value;
+  return v.year + "-" + v.month + "-" + v.day;
+}
+const date = inputs.date || todayInTokyo();
 
 const stageSchema = {
   type: "object",
