@@ -198,7 +198,13 @@ const DECIDED_UNREGISTERED_FAILURES = [
   { keywords: ["タバコ", "間隔"], note: "タバコ記録の過去時刻申告時の間隔誤計算・行順崩れ（2026-11-18 本人決定：起票しない）" },
   { keywords: ["間の日", "グレーアウト"], note: "間の日タブのチェック時グレーアウト不具合（2026-11-18 本人決定：起票しない）" },
   { keywords: ["ダッシュボード", "黒"], note: "ダッシュボードのダークモード追従による黒表示（2026-11-18 本人決定：起票しない）" },
-  { keywords: ["When to post"], note: "Issue #58「When to post」の再開・追記判断の未実施（2026-11-18 本人決定：起票しない。ig系スキル削除済み）" }
+  { keywords: ["When to post"], note: "Issue #58「When to post」の再開・追記判断の未実施（2026-11-18 本人決定：起票しない。ig系スキル削除済み）" },
+  { keywords: ["job-candidate-list", "503"], note: "Geminiレビュー job-candidate-list のHTTP 503による停止（2026-11-18 本人決定：起票しない。リトライで完走）" },
+  { keywords: ["fortune", "タイムアウト"], note: "Geminiレビュー fortune のタイムアウト（2026-11-18 本人決定：起票しない。リトライで完走）" },
+  { keywords: ["mac-connection", "503"], note: "Geminiレビュー mac-connection のHTTP 503・429（2026-11-18 本人決定：起票しない。リトライで完走）" },
+  { keywords: ["再確認", "429"], note: "Gemini修正後再確認の無料枠上限（HTTP 429）による中断（2026-11-18 本人決定：起票しない。17時の枠リセット後に再開して完了）" },
+  { keywords: ["NODIFF", "空振り"], note: "Gemini修正後再確認のNODIFF空振り（TZ未指定）（2026-11-18 本人決定：起票しない。TZ指定で再実行して解消）" },
+  { keywords: ["接続ページ", "ブロック"], note: "Gemini API接続ページの組織ポリシーによるブロック（2026-11-18 本人決定：起票しない。本人側の入力で接続完了）" }
 ];
 function normalizeFailureName(s) {
   return String(s || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
