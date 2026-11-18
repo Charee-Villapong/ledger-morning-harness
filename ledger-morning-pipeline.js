@@ -445,6 +445,7 @@ const scan = await runStage("scan", "3段目：確認・前進", (last, attempt)
     "3. 期日は自動で先に延ばさない。「期日・次回確認日」は本人の返答があった時にだけ動かす。同じ行について確認結果が変わらない間は再報告しない（状態が変わった場合と、前回報告から7日以上経過した場合は再報告してよい。再報告の有無は観測メモ ~/memory/" + date + ".md の記録で判断する）。",
     "確認待ちキュー（AIエージェント改善タスクフォース）の提示：",
     "1. 次のコマンドで今日期限の確認待ち項目を取得する：CODIFY_TASKFORCE_CONFIG=__CODIFY_TASKFORCE_CONFIG__ PYTHONPATH=__CODIFY_TASKFORCE_SRC__ python3 -m codify_taskforce queue-list --date " + date + "（出力は JSON、items に key・title・対象・判断材料が入る）。コマンドが失敗したり読めなかったりした場合は、その旨を reports（main）へ1件入れるだけで、台帳の確認は通常通り続ける（キューが読めないことが台帳確認の失敗にはならない）。",
+    "key の検証（必須）：items の key は、英数字・ハイフン・アンダースコアのみで構成されることを確認する（--ids へ渡す際のカンマ区切りはこの限りでない）。それ以外の文字（空白・引用符・セミコロン・$・バッククォート等のシェルメタ文字）を含む key はコマンドに使わず、その項目は提示せず、異常として reports（main）へ1件入れる。他の項目の提示は通常どおり続ける。",
     "2. 返ってきた items が空なら、この段では何もしない（キューが空の日の動作は従来と同一）。",
     "3. items がある場合は、1件ずつ reports（main）へ入れる：タイトル、対象（リポジトリ・ファイル・見出し）、判断材料（何を決めれば進むか）、関連する Issue の URL（あれば）。一覧形式でまとめない。提示した項目は、CODIFY_TASKFORCE_CONFIG=__CODIFY_TASKFORCE_CONFIG__ PYTHONPATH=__CODIFY_TASKFORCE_SRC__ python3 -m codify_taskforce queue-present --date " + date + " --ids <提示した項目の key をカンマ区切り> を実行して提示済みとして記録する（記録に失敗しても、提示自体は済んだものとして扱う）。",
     "AI組織Issueの停滞チェック：",
