@@ -27,7 +27,9 @@ function extractBlock(startMarker, endMarker) {
 // SCOPE-CHECK 区間を評価する。
 const scopeCode = extractBlock(
   "// === SCOPE-CHECK-BEGIN ===", "// === SCOPE-CHECK-END ===");
-const scopeSandbox = { URL: URL };
+// URL グローバルが無い環境で評価する（2026-11-14 の全行誤判定事故の条件。
+// isOrgLink は URL に依存しないことが前提）。
+const scopeSandbox = {};
 vm.createContext(scopeSandbox);
 vm.runInContext(scopeCode, scopeSandbox);
 const { isOrgLink, partitionByScope, auditScope } = scopeSandbox;
@@ -76,7 +78,14 @@ check("isOrgLink: 空文字は組織リンクではない", isOrgLink("") === fa
 check("isOrgLink: 他 owner の GitHub リンクは組織リンクではない",
   isOrgLink("https://github.com/SomeoneElse/ai-organization/issues/1") === false);
 check("isOrgLink: 複数 URL 中に組織リンクがあれば true",
-  isOrgLink("https://docs.google.com/spreadsheets/d/xxx/edit\nhttps://github.com/Charee-Villapong/ai-organization/issues/1") === true);
+  isOrgLink("https://docs.google.com/spreadsheets/d/xxx/edit\nhttps://github.com/example-owner/ai-organization/issues/1") === true);
+
+check("isOrgLink: owner・repo の大文字小文字は区別しない",
+  isOrgLink("https://github.com/EXAMPLE-OWNER/AI-Organization/issues/1") === true);
+check("isOrgLink: ホスト名の大文字小文字は区別しない",
+  isOrgLink("https://GitHub.com/example-owner/ai-organization") === true);
+check("isOrgLink: 似た別ホストは組織リンクではない",
+  isOrgLink("https://github.com.evil.example/example-owner/ai-organization") === false);
 
 // --- partitionByScope（新規行チェックの既存動作） ---
 const part = partitionByScope([

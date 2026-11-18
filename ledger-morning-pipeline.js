@@ -124,16 +124,21 @@ function extractUrls(text) {
   return String(text).match(/https?:\/\/[^\s"'<>\])）]+/g) || [];
 }
 function isOrgLink(linkText) {
+  // URL グローバルに依存しない文字列パースで判定する（実行環境に URL が無いと
+  // new URL が例外になり全行 false になる。2026-11-14 の全行誤判定事故の原因）。
+  // オーナー名・リポジトリ名は大文字小文字を区別しない。
+  const owner = ORG_REPO_OWNER.toLowerCase();
+  const names = ORG_REPO_NAMES.map((n) => n.toLowerCase());
   return extractUrls(linkText).some((u) => {
-    let url;
-    try {
-      url = new URL(u);
-    } catch (e) {
-      return false;
-    }
-    if (url.hostname !== "github.com") return false;
-    const parts = url.pathname.split("/").filter(Boolean);
-    return parts.length >= 2 && parts[0] === ORG_REPO_OWNER && ORG_REPO_NAMES.indexOf(parts[1]) >= 0;
+    const m = String(u).match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?/i);
+    if (!m) return false;
+    if (m[1].toLowerCase() !== "github.com") return false;
+    const parts = (m[2] || "").split("/").filter(Boolean);
+    return (
+      parts.length >= 2 &&
+      parts[0].toLowerCase() === owner &&
+      names.indexOf(parts[1].toLowerCase()) >= 0
+    );
   });
 }
 function partitionByScope(candidates) {
