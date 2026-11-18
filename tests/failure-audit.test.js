@@ -64,5 +64,29 @@ check("決定済みだけ＋台帳空は incomplete にしない",
 r = detectUnregisteredFailures([{ task: "typeのプロフィール更新" }], ["x"]);
 check("typeでもログインでなければ抑止しない", eq(r.missing, ["typeのプロフィール更新"]));
 
+// 台帳側の突合も正規化する（2026-11-18 修正）：台帳タスク名の表記揺れで
+// 登録済みの失敗を未登録と誤検知しない。
+r = detectUnregisteredFailures([{ task: "求人チェックの失敗" }], ["求人チェック の 失敗"]);
+check("台帳側の表記揺れ（空白）でも登録済みとみなす", eq(r.missing, []));
+r = detectUnregisteredFailures([{ task: "ABCタスクの失敗" }], ["ａｂｃタスクの失敗"]);
+check("台帳側の表記揺れ（全角・大文字小文字）でも登録済みとみなす", eq(r.missing, []));
+
+// 汎用1語キーワードの複合化（2026-11-18 修正）：元の失敗は引き続き抑止し、
+// 汎用語だけを含む無関係な失敗は抑止しない。
+r = detectUnregisteredFailures(
+  [{ task: "候補リスト収集パイプラインのLocationDivision enumエラー" },
+   { task: "候補リストの行高バグ" },
+   { task: "台帳ハーネスの完了報告欠落" }],
+  ["x"]
+);
+check("元の失敗3件（複合キーワード化後）も欠落に出ない",
+  eq(r.missing, []) && r.suppressed.length === 3);
+r = detectUnregisteredFailures([{ task: "別ツールのenum定義ミス" }], ["x"]);
+check("enum単独では抑止しない", eq(r.missing, ["別ツールのenum定義ミス"]));
+r = detectUnregisteredFailures([{ task: "日記帳の行高ずれ" }], ["x"]);
+check("行高単独では抑止しない", eq(r.missing, ["日記帳の行高ずれ"]));
+r = detectUnregisteredFailures([{ task: "月次レポートの完了報告遅延" }], ["x"]);
+check("完了報告単独では抑止しない", eq(r.missing, ["月次レポートの完了報告遅延"]));
+
 console.log(failures === 0 ? "\nALL PASS" : "\n" + failures + " FAILURES");
 process.exit(failures === 0 ? 0 : 1);

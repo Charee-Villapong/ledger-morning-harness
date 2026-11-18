@@ -185,13 +185,13 @@ const DECIDED_UNREGISTERED_FAILURES = [
   { keywords: ["from40"], note: "FROM40登録（2026-11-16 本人決定：登録しない）" },
   { keywords: ["threads-tech-collection"], note: "threads-tech-collection（2026-11-16 本人決定：登録しない）" },
   { keywords: ["type", "ログイン"], note: "typeログイン（2026-11-16 本人決定：登録しない）" },
-  { keywords: ["enum"], note: "候補リスト収集のenumエラー（2026-11-17 本人決定：閉じる。修正はIssue #69で追跡）" },
+  { keywords: ["locationdivision", "enum"], note: "候補リスト収集パイプラインのLocationDivision enumエラー（2026-11-17 本人決定：閉じる。修正はIssue #69で追跡）。記録上の表記が常に LocationDivision と enum の組で現れるため複合キーワードにした（汎用の enum 単独では抑止しない）" },
   { keywords: ["mac-ssh"], note: "mac-ssh不通（2026-11-17 本人決定：閉じる。台帳3行目で追跡中）" },
   { keywords: ["gmail", "セキュリティ"], note: "メインGmailセキュリティ確認のブラウザ失敗（2026-11-17 本人決定：閉じる。本人確認済みで決着）" },
-  { keywords: ["完了報告"], note: "台帳ハーネスの完了報告欠落（2026-11-17 本人決定：閉じる。2026-11-17に修正済み）" },
+  { keywords: ["完了報告", "欠落"], note: "台帳ハーネスの完了報告欠落（2026-11-17 本人決定：閉じる。2026-11-17に修正済み）。元の失敗名「完了報告欠落」に紐づく複合キーワードにした（完了報告 単独では抑止しない）" },
   { keywords: ["ワークマン"], note: "ワークマン取り置き再予約の失敗（2026-11-17 本人決定：閉じる。再実行は当日16:08の予約済みcronで追跡）" },
   { keywords: ["threads", "書き込み"], note: "Threads技術情報収集の書き込み漏れ（2026-11-17 本人決定：閉じる。収集自体は2026-11-16に復旧）" },
-  { keywords: ["行高"], note: "候補リストの行高バグ（2026-11-17 本人決定：閉じる。修正と再発防止は実施済み）" },
+  { keywords: ["候補リスト", "行高"], note: "候補リストの行高バグ（2026-11-17 本人決定：閉じる。修正と再発防止は実施済み）。元の失敗名に紐づく複合キーワードにした（行高 単独では抑止しない）" },
   { keywords: ["エントロピー", "並び替え"], note: "エントロピー削減レポートのスライド並び替えの単独実行失敗（2026-11-18 本人決定：起票しない）" },
   { keywords: ["deck_check", "スライド順"], note: "deck_check.pyのスライド順誤読（2026-11-18 本人決定：起票しない）" },
   { keywords: ["pptx", "破損"], note: "pptxのslide21.xml重複による破損（2026-11-18 本人決定：起票しない）" },
@@ -222,14 +222,16 @@ function detectUnregisteredFailures(failures, ledgerTasks) {
       failed.push(t);
     }
   }
+  // 台帳側も失敗名と同じ正規化で突合する（空白・大文字小文字・全角の表記揺れで
+  // 登録済みのタスクを未登録と誤検知しないため）。
   const registered = {};
   for (const t of ledgerTasks || []) {
-    if (t) registered[String(t).trim()] = true;
+    if (t) registered[normalizeFailureName(t)] = true;
   }
   if (failed.length > 0 && Object.keys(registered).length === 0) {
     return { status: "incomplete", missing: [], failures: failed.length, suppressed: suppressed };
   }
-  return { status: "ok", missing: failed.filter((t) => !registered[t]), failures: failed.length, suppressed: suppressed };
+  return { status: "ok", missing: failed.filter((t) => !registered[normalizeFailureName(t)]), failures: failed.length, suppressed: suppressed };
 }
 // === FAILURE-AUDIT-END ===
 
