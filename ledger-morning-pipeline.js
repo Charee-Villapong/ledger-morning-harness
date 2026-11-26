@@ -317,6 +317,7 @@ async function runStage(stageKey, label, buildPrompt, schema) {
 const scopeReports = [];
 const scopeRejectedNew = [];
 let scopeSuspectExisting = [];
+let failureAuditMissing = [];
 
 phase("collect");
 // 1段目は「候補の収集（書き込まない）→ コードによる対象範囲チェック → 通過した候補だけ登録」の順で固定する。
@@ -407,7 +408,9 @@ if (scopeAudit.status === "success") {
   } else {
     scopeSuspectExisting = auditResult.suspects;
     if (scopeSuspectExisting.length > 0) {
-      scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります（範囲漏れの疑い。自動削除はしません）：" + scopeSuspectExisting.map((t) => "「" + t + "」").join("、") });
+      // 2026-11-26 本人決定：一括報告の全件リストは本人へ出さず組織側（ai-org）へ渡し、
+      // 本人へは件数のみの要約を別途出す（要約の追加は最終報告の組み立て時に行う）。
+      scopeReports.push({ destination: "ai-org", text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります（範囲漏れの疑い。自動削除はしません）：" + scopeSuspectExisting.map((t) => "「" + t + "」").join("、") });
     }
     log("scope audit finished", { rows: auditResult.rows, suspects: scopeSuspectExisting.length });
   }
@@ -436,7 +439,10 @@ if (failureAudit.status === "success") {
     log("failure audit incomplete", { failures: fr.failures });
   } else {
     if (fr.missing.length > 0) {
-      scopeReports.push({ destination: "main", text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + fr.missing.length + " 件あります：" + fr.missing.map((t) => "「" + t + "」").join("、") + "。その場でタスク起票してください（報告の型：タスク名＋再開条件）。" });
+      // 2026-11-26 本人決定：一括報告の全件リストは本人へ出さず組織側（ai-org）へ渡し、
+      // 本人へは件数のみの要約を別途出す（要約の追加は最終報告の組み立て時に行う）。
+      failureAuditMissing = fr.missing;
+      scopeReports.push({ destination: "ai-org", text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + fr.missing.length + " 件あります：" + fr.missing.map((t) => "「" + t + "」").join("、") + "。組織側で起票・処理する。" });
     }
     log("failure audit finished", { failures: fr.failures, missing: fr.missing.length, suppressed: (fr.suppressed || []).length });
   }
@@ -498,6 +504,23 @@ const report = await runStage("report", "4段目：報告", (last, attempt) =>
 );
 log("report finished", { status: report.status });
 
+// 2026-11-26 本人決定：一括報告（範囲監査の疑い・失敗未登録の監査）は、
+// 全件リストを組織側（ai-org）へ渡し、本人へは件数のみの要約を出す。
+// 本人の判断・操作が要る分は、この要約とは別に scan 段が1件ずつ報告する。
+const finalReports = (report.reports || allReports).slice();
+if (scopeSuspectExisting.length > 0) {
+  finalReports.push({
+    destination: "main",
+    text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります。組織側で確認・処理します（自動削除はしません）。"
+  });
+}
+if (failureAuditMissing.length > 0) {
+  finalReports.push({
+    destination: "main",
+    text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + failureAuditMissing.length + " 件あります。全件、組織側で起票・処理します（本人の判断・操作が要る分は 0 件）。"
+  });
+}
+
 return {
   date: date,
   stages: {
@@ -506,6 +529,6 @@ return {
     scan: { status: scan.status, summary: scan.summary },
     report: { status: report.status, summary: report.summary }
   },
-  reports: report.reports || allReports,
+  reports: finalReports,
   scope: { rejectedNew: scopeRejectedNew, suspectExisting: scopeSuspectExisting }
 };
