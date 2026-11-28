@@ -407,11 +407,10 @@ if (scopeAudit.status === "success") {
     log("scope audit incomplete", { rows: auditResult.rows, rowsWithoutUrl: auditResult.rowsWithoutUrl });
   } else {
     scopeSuspectExisting = auditResult.suspects;
-    if (scopeSuspectExisting.length > 0) {
-      // 2026-11-26 本人決定：一括報告の全件リストは本人へ出さず組織側（ai-org）へ渡し、
-      // 本人へは件数のみの要約を別途出す（要約の追加は最終報告の組み立て時に行う）。
-      scopeReports.push({ destination: "ai-org", text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります（範囲漏れの疑い。自動削除はしません）：" + scopeSuspectExisting.map((t) => "「" + t + "」").join("、") });
-    }
+    // 2026-11-28 本人決定（AI組織チャットでの「長すぎ」指摘）：一括報告の全件リストは、
+    // 本人宛（main）にも AI組織チャット（ai-org）宛にも出さない。全件は組織側の記録に
+    // 残し、チャットへは短い形（件数のみ）を最終報告の組み立て時にコードが両宛先へ
+    // 追加する。本人の判断・操作が要る分は scan 段が1件ずつ別報告で出す。
     log("scope audit finished", { rows: auditResult.rows, suspects: scopeSuspectExisting.length });
   }
 } else {
@@ -439,10 +438,10 @@ if (failureAudit.status === "success") {
     log("failure audit incomplete", { failures: fr.failures });
   } else {
     if (fr.missing.length > 0) {
-      // 2026-11-26 本人決定：一括報告の全件リストは本人へ出さず組織側（ai-org）へ渡し、
-      // 本人へは件数のみの要約を別途出す（要約の追加は最終報告の組み立て時に行う）。
+      // 2026-11-28 本人決定（AI組織チャットでの「長すぎ」指摘）：全件リストは
+      // チャットへ出さない。全件は組織側の記録に残し、チャットへは短い形
+      // （件数のみ）を最終報告の組み立て時にコードが両宛先へ追加する。
       failureAuditMissing = fr.missing;
-      scopeReports.push({ destination: "ai-org", text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + fr.missing.length + " 件あります：" + fr.missing.map((t) => "「" + t + "」").join("、") + "。組織側で起票・処理する。" });
     }
     log("failure audit finished", { failures: fr.failures, missing: fr.missing.length, suppressed: (fr.suppressed || []).length });
   }
@@ -491,7 +490,7 @@ const report = await runStage("report", "4段目：報告", (last, attempt) =>
     "- 1段目（新規収集）: " + collect.status + " — " + collect.summary,
     "- 2段目（現況更新・最新化）: " + refresh.status + " — " + refresh.summary,
     "- 3段目（確認・前進）: " + scan.status + " — " + scan.summary,
-    "対象範囲チェック（ハーネスのコードが実施）：弾いた新規行 " + scopeRejectedNew.length + " 件、範囲漏れの疑い " + scopeSuspectExisting.length + " 件。該当する報告は次の一覧に含まれているので、そのまま reports へ入れること。",
+    "対象範囲チェックと失敗未登録の監査（ハーネスのコードが実施）：弾いた新規行 " + scopeRejectedNew.length + " 件、範囲漏れの疑い " + scopeSuspectExisting.length + " 件、台帳に無い失敗 " + failureAuditMissing.length + " 件。範囲監査・失敗未登録監査の一括報告は、全件リストをチャットへ出さず最終組み立て時にコードが短い形（件数のみ）で追加するので、この段の一覧には含まれていない。完了報告の箇条書きでは、これらの件数に触れる場合も項目名は並べないこと。弾いた新規行の報告は次の一覧に含まれているので、そのまま reports へ入れること。",
     "1〜3段目が出した報告の一覧（JSON）：",
     JSON.stringify(allReports),
     "やること：",
@@ -504,8 +503,10 @@ const report = await runStage("report", "4段目：報告", (last, attempt) =>
 );
 log("report finished", { status: report.status });
 
-// 2026-11-26 本人決定：一括報告（範囲監査の疑い・失敗未登録の監査）は、
-// 全件リストを組織側（ai-org）へ渡し、本人へは件数のみの要約を出す。
+// 2026-11-26 本人決定＋2026-11-28 本人決定（AI組織チャットでの「長すぎ」指摘）：
+// 一括報告（範囲監査の疑い・失敗未登録の監査）は、宛先が本人（main）でも
+// AI組織チャット（ai-org）でも、全件リストを出さず短い形（件数のみ）で出す。
+// 全件の内訳は組織側の記録（戻り値の scope 等）に残す。
 // 本人の判断・操作が要る分は、この要約とは別に scan 段が1件ずつ報告する。
 const finalReports = (report.reports || allReports).slice();
 if (scopeSuspectExisting.length > 0) {
@@ -513,11 +514,19 @@ if (scopeSuspectExisting.length > 0) {
     destination: "main",
     text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります。組織側で確認・処理します（自動削除はしません）。"
   });
+  finalReports.push({
+    destination: "ai-org",
+    text: "🤖AI組織・事務連絡 台帳の範囲監査：関連リンクが組織のものでない行が " + scopeSuspectExisting.length + " 件あります。組織側で確認・処理します（自動削除はしません）。全件の内訳は組織側の記録に残してあります。"
+  });
 }
 if (failureAuditMissing.length > 0) {
   finalReports.push({
     destination: "main",
     text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + failureAuditMissing.length + " 件あります。全件、組織側で起票・処理します（本人の判断・操作が要る分は 0 件）。"
+  });
+  finalReports.push({
+    destination: "ai-org",
+    text: "🤖AI組織・事務連絡 失敗未登録の監査：失敗・中断したのに台帳に無い作業が " + failureAuditMissing.length + " 件あります。組織側で起票・処理します。全件の内訳は組織側の記録に残してあります。本人の判断・操作が要る分があれば、別途1件ずつ報告します。"
   });
 }
 
